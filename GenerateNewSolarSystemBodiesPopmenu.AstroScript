@@ -1,0 +1,94 @@
+#popmenu    Generate New Solar System Bodies
+#author     Alan Bartholet
+#desc       Keeps star name and properties while generating new solar system bodies
+
+'Version 1.1
+
+if not isNull(EditingBody) Then
+	If EditingBody.TypeID = BODY_TYPE_MULT Or EditingBody.TypeID = BODY_TYPE_CLOSEMULT Or EditingBody.TypeID = BODY_TYPE_STAR Or EditingBody.TypeID = BODY_TYPE_BLUEGIANT Or EditingBody.TypeID = BODY_TYPE_BROWNDWARF Or EditingBody.TypeID = BODY_TYPE_REDGIANT Or EditingBody.TypeID = BODY_TYPE_WHITEDWARF Then
+		'Display the message box
+		mb = MsgBox("Allow for random populations?",36, "Random Population")
+
+		'Mark true if yes
+		If mb = 6 Then
+			randomPopulation = true
+		'Mark false if no
+		Else
+			randomPopulation = false
+		End If
+
+		'Process multiple star systems
+		If EditingBody.TypeID = BODY_TYPE_MULT Or EditingBody.TypeID = BODY_TYPE_CLOSEMULT Then
+			GenerateMultipleStarChildren EditingBody
+
+		'Process other star systems
+		ElseIf EditingBody.TypeID = BODY_TYPE_STAR Or EditingBody.TypeID = BODY_TYPE_BLUEGIANT Or EditingBody.TypeID = BODY_TYPE_BROWNDWARF Or EditingBody.TypeID = BODY_TYPE_REDGIANT Or EditingBody.TypeID = BODY_TYPE_WHITEDWARF Then
+			GenerateStarChildren EditingBody
+
+		End If
+
+		'Update population, habitability, and other statistics.
+		EditingBody.UpdateRootBody()
+	Else
+		MsgBox("Generate New Solar System Bodies must be run on a Star or Multiple Star body.")
+	End If
+End if
+
+'------------------------------------------------------------------------------
+'Process a single star
+'------------------------------------------------------------------------------
+Sub GenerateStarChildren(body)
+	'Save the existing name
+	sName = body.Name
+
+	RandomSystem body, randomPopulation
+
+	'If the RandomSystem function gave us an new name go though all the child
+	'bodies and replace it with the old one.
+	If body.Name <> sName Then
+		FixNames body, sName, body.Name
+	End If
+
+End sub
+
+'------------------------------------------------------------------------------
+'Process a multiple stars
+'------------------------------------------------------------------------------
+Sub GenerateMultipleStarChildren(body)
+	'Declare variables
+	Dim i	'as Int
+
+	'Loop through each body in the multiple star system
+	If body.ChildrenCount() > 0 Then
+		For i = 1 To body.ChildrenCount()
+
+			'Process multiple star systems
+			If body.GetChild(i - 1).TypeID = BODY_TYPE_MULT Or body.GetChild(i - 1).TypeID = BODY_TYPE_CLOSEMULT Then
+				GenerateMultipleStarChildren body.GetChild(i - 1)
+
+			'Process single star systems
+			ElseIf body.GetChild(i - 1).TypeID = BODY_TYPE_STAR Then
+				GenerateStarChildren body.GetChild(i - 1)
+			End If
+
+		Next
+	End If
+End Sub
+
+'------------------------------------------------------------------------------
+'Fix Names
+'------------------------------------------------------------------------------
+Sub FixNames(body, sName, nName)
+	'Declare variables
+	Dim i	'as Int
+
+	'Loop through each body in the multiple star system
+	If body.ChildrenCount() > 0 Then
+		For i = 1 To body.ChildrenCount()
+			FixNames body.GetChild(i - 1), sName, nName
+		Next
+	End If
+
+	body.Name = Replace(body.Name, nName, sName)
+	
+End Sub
